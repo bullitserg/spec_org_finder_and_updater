@@ -47,8 +47,10 @@ def main():
             try:
                 w_tmp.write(requests.get(procedure['urlPrintForm'], headers=EIS_HEADERS, timeout=(1, 3)).content)
             except requests.exceptions.ReadTimeout:
+                logger.info('%s %s' % (procedure['registrationNumber'], 'ReadTimeout'))
                 continue
             except requests.exceptions.ConnectTimeout:
+                logger.info('%s %s' % (procedure['registrationNumber'], 'ConnectTimeout'))
                 continue
 
         with open(tmp_html, mode='r', encoding='utf8') as r_tmp:
@@ -77,14 +79,21 @@ def main():
                     'Невозможно сформировать запрос для корректировки %(registrationNumber)s' % procedure
                 continue
 
-            if not procedure['customerId'] == procedure['placerId'] == procedure['specOrgId']:
+            json_info = '_'.join((str(procedure['id']), str(procedure['version'])))
+
+            if not (procedure['customerId'] == procedure['placerId'] == procedure['specOrgId']) \
+                    and (json_info not in json_loads_data):
+
+                json_loads_data.append(json_info)
                 procedure['need_correct'] = True
                 procedure['order_num'] = C_COUNT = next(counter)
                 procedure['update_query'] = '''UPDATE procedures p -- %(registrationNumber)s, placerId=%(placerId)s, customerId=%(customerId)s
     SET p.customerId = %(specOrgId)s, p.placerId = %(specOrgId)s, p.updateDateTime = NOW()
     WHERE p.id = %(id)s;\n\n''' % procedure
 
-        print(procedure['registrationNumber'], procedure['need_correct'])
+        if procedure['need_correct']:
+            logger.warn('%(registrationNumber)s find spec_org=%(specOrgRegNum)s' % procedure)
+
         sleep(sleep_time)
 
     # если есть записи, которые необходимо скорректировать
@@ -92,11 +101,6 @@ def main():
         MAIL_TEXT += 'Требуются корректировки по %s процедурам:\n\n' % C_COUNT
         procedures_data = filter(lambda d: d['need_correct'], procedures_data)
         for procedure in procedures_data:
-            json_info = '_'.join((str(procedure['id']), str(procedure['version'])))
-            if json_info in json_loads_data:
-                continue
-
-            json_loads_data.append(json_info)
 
             MAIL_TEXT += '''%(order_num)s) %(registrationNumber)s (%(editDateTime)s)\n''' % procedure
             SQL_TEXT += '%(update_query)s' % procedure
