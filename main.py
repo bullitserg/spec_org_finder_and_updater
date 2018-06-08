@@ -96,27 +96,29 @@ def main():
 
         sleep(sleep_time)
 
-    # если есть записи, которые необходимо скорректировать
-    if C_COUNT > 0:
-        MAIL_TEXT += 'Требуются корректировки по %s процедурам:\n\n' % C_COUNT
-        procedures_data = filter(lambda d: d['need_correct'], procedures_data)
-        for procedure in procedures_data:
+    # если нет записей, которые необходимо скорректировать, то выходим
+    if C_COUNT == 0:
+        return
 
-            MAIL_TEXT += '''%(order_num)s) %(registrationNumber)s (%(editDateTime)s)\n''' % procedure
-            SQL_TEXT += '%(update_query)s' % procedure
+    MAIL_TEXT += 'Требуются корректировки по %s процедурам:\n\n' % C_COUNT
+    procedures_data = filter(lambda d: d['need_correct'], procedures_data)
+    for procedure in procedures_data:
 
-        with open(tmp_json, mode='w') as tmp_json_f:
-            tmp_json_f.write(json.dumps(json_loads_data))
+        MAIL_TEXT += '''%(order_num)s) %(registrationNumber)s (%(editDateTime)s)\n''' % procedure
+        SQL_TEXT += '%(update_query)s' % procedure
 
-        with open(tmp_sql, mode='w', encoding='utf8') as o_sql:
-            o_sql.write(SQL_TEXT)
+    with open(tmp_json, mode='w') as tmp_json_f:
+        tmp_json_f.write(json.dumps(json_loads_data))
 
-        email.mail_sender(MAIL_THEME, MAIL_TEXT,
-                          recipients=recipients,
-                          add_files=(tmp_sql,),
-                          report=True,
-                          counter=C_COUNT,
-                          datetime=True)
+    with open(tmp_sql, mode='w', encoding='utf8') as o_sql:
+        o_sql.write(SQL_TEXT)
+
+    email.mail_sender(MAIL_THEME, MAIL_TEXT,
+                      recipients=recipients,
+                      add_files=(tmp_sql,),
+                      report=True,
+                      counter=C_COUNT,
+                      datetime=True)
 
 if __name__ == '__main__':
     logger = logger_module.logger()
