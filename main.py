@@ -52,6 +52,9 @@ def main():
             except requests.exceptions.ConnectTimeout:
                 logger.info('%s %s' % (procedure['registrationNumber'], 'ConnectTimeout'))
                 continue
+            except requests.exceptions.ConnectionError:
+                logger.info('%s %s' % (procedure['registrationNumber'], 'ConnectionError'))
+                continue
 
         with open(tmp_html, mode='r', encoding='utf8') as r_tmp:
             eis_xml = r_tmp.read()
